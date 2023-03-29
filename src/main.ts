@@ -482,6 +482,7 @@ export default class NewZettel extends Plugin {
     this.addCommand({
       id: "new-sibling-note",
       name: "New Sibling Zettel Note",
+      icon: 'file-symlink',
       callback: () => {
         this.makeNoteFunction(this.makeNoteForNextSiblingOf);
       },
@@ -490,6 +491,7 @@ export default class NewZettel extends Plugin {
     this.addCommand({
       id: "new-child-note",
       name: "New Child Zettel Note",
+      icon: 'file-down',
       callback: () => {
         this.makeNoteFunction(this.makeNoteForNextChildOf);
       },
@@ -498,6 +500,7 @@ export default class NewZettel extends Plugin {
     this.addCommand({
       id: "new-sibling-note-dont-open",
       name: "New Sibling Zettel Note (Don't Open)",
+      icon: 'file-symlink',
       callback: () => {
         this.makeNoteFunction(this.makeNoteForNextSiblingOf, false);
       },
@@ -506,6 +509,7 @@ export default class NewZettel extends Plugin {
     this.addCommand({
       id: "new-child-note-dont-open",
       name: "New Child Zettel Note (Don't Open)",
+      icon: 'file-down',
       callback: () => {
         this.makeNoteFunction(this.makeNoteForNextChildOf, false);
       },
