@@ -14,6 +14,7 @@ import {
 import "./styles/styles.css";
 
 const idOnlyRegex = /([0-9]+|[a-z]+)/g;
+const idOnlyRegexFuzzyHyphen = /([0-9\-]+|[a-z\-]+)/g;
 const checkSettingsMessage = "Try checking the settings if this seems wrong.";
 
 const lettersIDComponentSuccessors: Record<string, string> = {
@@ -51,6 +52,7 @@ interface LuhmanSettings {
   addTitle: boolean;
   addAlias: boolean;
   useLinkAlias: boolean;
+  fuzzyHyphen: boolean;
 }
 
 const DEFAULT_SETTINGS: LuhmanSettings = {
@@ -59,6 +61,7 @@ const DEFAULT_SETTINGS: LuhmanSettings = {
   addAlias: false,
   useLinkAlias: false,
   separator: "⁝ ",
+  fuzzyHyphen: false,
 };
 
 class LuhmanSettingTab extends PluginSettingTab {
@@ -71,7 +74,7 @@ class LuhmanSettingTab extends PluginSettingTab {
 
   display(): void {
     const { containerEl } = this;
-    const { matchRule, separator, addTitle, addAlias, useLinkAlias } = this.plugin.settings;
+    const { matchRule, separator, addTitle, addAlias, useLinkAlias, fuzzyHyphen } = this.plugin.settings;
     containerEl.empty();
     containerEl.createEl("p", {
       text: "The ID is a block of letters and numbers at the beginning of the filename",
@@ -161,6 +164,21 @@ class LuhmanSettingTab extends PluginSettingTab {
             })
         );
     }
+    if (matchRule === "fuzzy") {
+      new Setting(containerEl)
+        .setName("Include hypen in fuzzy match")
+        .setDesc(
+          "Great for matching dates as IDs (e.g. 2021-01-21) produces child of 2021-01-21a"
+        )
+        .setDisabled(matchRule !== "fuzzy")
+        .addToggle((setting) =>
+          setting.setValue(fuzzyHyphen).onChange(async (value) => {
+            this.plugin.settings.fuzzyHyphen = value;
+            await this.plugin.saveSettings();
+            this.display();
+          })
+        );
+    }
   }
 }
 
@@ -198,13 +216,15 @@ export default class NewZettel extends Plugin {
   }
 
   incrementID(id: string): string {
-    const parts = id.match(idOnlyRegex)!;
+    const regex = this.settings.fuzzyHyphen ? idOnlyRegexFuzzyHyphen : idOnlyRegex;
+    const parts = id.match(regex)!;
     const lastPart = parts.pop()!;
     return parts.concat([this.incrementIDComponent(lastPart)]).join("");
   }
 
   parentID(id: string): string {
-    const parts = id.match(idOnlyRegex)!;
+    const regex = this.settings.fuzzyHyphen ? idOnlyRegexFuzzyHyphen : idOnlyRegex;
+    const parts = id.match(regex)!;
     if (parts) {
       parts.pop();
       return parts.join("");
@@ -214,8 +234,10 @@ export default class NewZettel extends Plugin {
   }
 
   nextComponentOf(id: string): string {
+    // const regex = this.settings.fuzzyHyphen ? idOnlyRegexFuzzyHyphen : idOnlyRegex;
     const parts = id.match(idOnlyRegex)!;
     const lastPart = parts.pop()!;
+    console.log('nextComponentOf', 'lastPart', lastPart)
     if (this.isNumber(lastPart)) {
       return "a";
     } else {
@@ -235,6 +257,12 @@ export default class NewZettel extends Plugin {
       ),
       fuzzy: /^((?:[0-9]+|[a-z]+)+).*/,
     };
+
+    // allow hypen in fuzzy match
+    if (this.settings.fuzzyHyphen === true) {
+      ruleRegexes.fuzzy = /^((?:[0-9\-]+|[a-z\-]+)+).*/;
+    }
+    
     const match = filename.match(ruleRegexes[this.settings.matchRule]);
     if (match) {
       return match[1];
@@ -249,6 +277,7 @@ export default class NewZettel extends Plugin {
 
   firstAvailableID(startingID: string): string {
     let nextID = startingID;
+    console.log('firstAvailableID', startingID)
     while (this.idExists(nextID)) {
       nextID = this.incrementID(nextID);
     }
